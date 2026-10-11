@@ -578,7 +578,10 @@ footer { font-size: .8rem; color: var(--muted); display: grid; gap: 4px; border-
 
   function renderWeek(days, has) {
     const H = Array.from({ length: 24 }, (_, i) => i);
-    let html = `<thead><tr><th></th>${H.map((h) => `<th>${h % 3 === 0 ? String(h).padStart(2, "0") : ""}</th>`).join("")}</tr></thead><tbody>`;
+    // Label every hour for the 3 hours after sunrise and before sunset; 3-hourly elsewhere.
+    const near = new Set();
+    for (const d of days) for (let i = 0; i <= 3; i++) { near.add(Math.floor(d.sun.rise / 60) + i); near.add(Math.floor(d.sun.set / 60) - i); }
+    let html = `<thead><tr><th></th>${H.map((h) => `<th${near.has(h) ? ' style="color:var(--ink)"' : ""}>${h % 3 === 0 || near.has(h) ? String(h).padStart(2, "0") : ""}</th>`).join("")}</tr></thead><tbody>`;
     for (const d of days) {
       html += `<tr class="${d.key === selectedDay ? "sel" : ""}"><th class="day" scope="row">${dayLabel(d.key)}</th>`;
       for (const h of H) {
