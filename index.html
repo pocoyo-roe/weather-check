@@ -1,0 +1,686 @@
+<title>North Landing Opening Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: tide-table utility. Summary strip, best windows, week grid, then one day in detail. Chalk-and-slate palette from the cove itself. */
+:root {
+  --bg: #f6f7f5;          /* chalk */
+  --surface: #ffffff;
+  --ink: #17242b;         /* North Sea slate */
+  --muted: #5b6b72;
+  --line: #d9dfdf;
+  --sea: #1f6f86;         /* accent: deep water */
+  --sea-soft: #d5e9ee;
+  --good: #2f8a4c;
+  --good-bg: #dcefdf;
+  --warn: #b7791f;
+  --warn-bg: #f7e9cf;
+  --bad: #b8392f;
+  --bad-bg: #f5d9d5;
+  --night: #e4e7e8;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171b; --surface: #16222a; --ink: #e6ecee; --muted: #94a5ac; --line: #2a3a42;
+    --sea: #5fb8d0; --sea-soft: #1c3742;
+    --good: #5cc07a; --good-bg: #183324; --warn: #e2a64a; --warn-bg: #3a2c14; --bad: #ec7468; --bad-bg: #3e1d1a;
+    --night: #1b262c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f171b; --surface: #16222a; --ink: #e6ecee; --muted: #94a5ac; --line: #2a3a42;
+  --sea: #5fb8d0; --sea-soft: #1c3742;
+  --good: #5cc07a; --good-bg: #183324; --warn: #e2a64a; --warn-bg: #3a2c14; --bad: #ec7468; --bad-bg: #3e1d1a;
+  --night: #1b262c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 48px; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 700; }
+h2 { font-size: 1.55rem; }
+h3 { font-size: 1.2rem; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+a { color: var(--sea); }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--sea); outline-offset: 2px; }
+
+header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; border-bottom: 2px solid var(--ink); padding-bottom: 14px; }
+header.top .meta { display: grid; gap: 2px; text-align: right; }
+@media (max-width: 640px) { header.top .meta { text-align: left; } }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 6px 12px; font-size: .9rem; }
+.btn:hover { border-color: var(--sea); }
+.btn.primary { background: var(--sea); border-color: var(--sea); color: var(--bg); font-weight: 600; }
+
+.notice { border: 1px dashed var(--sea); background: var(--sea-soft); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; }
+
+/* Now strip */
+.now { display: grid; grid-template-columns: minmax(220px, 1fr) 2fr; gap: 16px; align-items: stretch; }
+@media (max-width: 760px) { .now { grid-template-columns: 1fr; } }
+.verdict { border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; background: var(--surface); border: 1px solid var(--line); }
+.verdict .big { font-family: var(--font-display); font-size: 2.4rem; font-weight: 700; line-height: 1; }
+.verdict.l0 { background: var(--good-bg); border-color: var(--good); } .verdict.l0 .big { color: var(--good); }
+.verdict.l1 { background: var(--warn-bg); border-color: var(--warn); } .verdict.l1 .big { color: var(--warn); }
+.verdict.l2 { background: var(--bad-bg); border-color: var(--bad); } .verdict.l2 .big { color: var(--bad); }
+.verdict.ln .big { color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.stat { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+.stat .v { font-family: var(--font-mono); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.stat .s { font-size: .82rem; color: var(--muted); }
+.flag { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 1px 6px; border-radius: 4px; }
+.flag.l0 { background: var(--good-bg); color: var(--good); }
+.flag.l1 { background: var(--warn-bg); color: var(--warn); }
+.flag.l2 { background: var(--bad-bg); color: var(--bad); }
+
+section { display: grid; gap: 12px; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+
+/* Best windows */
+.windows { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.win { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; text-align: left; }
+.win:hover { border-color: var(--sea); }
+.win .d { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; }
+.win ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.win li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.win .sun { font-size: .8rem; color: var(--muted); }
+
+/* Week grid */
+.grid-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table.week { border-collapse: separate; border-spacing: 2px; width: 100%; min-width: 680px; padding: 6px; }
+table.week th { font-family: var(--font-mono); font-weight: 400; font-size: .7rem; color: var(--muted); text-align: center; padding: 2px 0; }
+table.week th.day { text-align: left; font-family: var(--font-body); font-size: .85rem; color: var(--ink); font-weight: 600; white-space: nowrap; padding-right: 8px; }
+table.week td { height: 26px; border-radius: 3px; padding: 0; }
+table.week td button { width: 100%; height: 100%; border: 0; border-radius: 3px; background: transparent; padding: 0; display: block; }
+td.c0 { background: var(--good); } td.c1 { background: var(--warn); } td.c2 { background: var(--bad); }
+td.cn { background: var(--night); } td.cx { background: var(--line); opacity: .5; }
+td.c0.dim, td.c1.dim, td.c2.dim { opacity: .28; }
+tr.sel th.day { color: var(--sea); }
+tr.sel td { box-shadow: inset 0 0 0 1px var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .82rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
+/* Day detail */
+.day-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.day-tabs button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: .88rem; }
+.day-tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; overflow-x: auto; }
+.chart svg { display: block; width: 100%; min-width: 620px; height: auto; }
+.chart text { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+.tides { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: .92rem; }
+.hours-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table.hours { border-collapse: collapse; width: 100%; min-width: 720px; font-size: .88rem; }
+table.hours th, table.hours td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.hours th { font-family: var(--font-mono); font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 400; }
+table.hours td { font-variant-numeric: tabular-nums; }
+table.hours tr.night td { color: var(--muted); background: var(--night); }
+.arrow { display: inline-block; width: 14px; text-align: center; }
+.why { color: var(--muted); font-size: .82rem; white-space: normal; min-width: 180px; }
+
+/* Exposure + settings */
+.two { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+.compass { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+.compass svg { width: 100%; max-width: 280px; display: block; margin: 0 auto; height: auto; }
+.compass text { font-family: var(--font-mono); font-size: 12px; fill: var(--muted); }
+.prose { display: grid; gap: 10px; max-width: 68ch; }
+details.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+details.panel summary { cursor: pointer; font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; }
+details.panel[open] summary { margin-bottom: 12px; }
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px; }
+.form label { display: grid; gap: 4px; font-size: .88rem; }
+.form label span.h { color: var(--muted); font-size: .78rem; }
+.form input { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 6px 8px; width: 100%; font-family: var(--font-mono); }
+textarea { width: 100%; min-height: 110px; border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 8px; font-family: var(--font-mono); font-size: .8rem; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.status { font-size: .88rem; }
+footer { font-size: .8rem; color: var(--muted); display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 12px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="eyebrow">North Landing · Flamborough · 54.13°N 0.10°W</p>
+      <h1>North Landing Opening Planner</h1>
+    </div>
+    <div class="meta">
+      <span class="mono muted" id="fresh">Forecast not loaded</span>
+      <span class="mono muted" id="clock"></span>
+    </div>
+  </header>
+
+  <div class="notice" id="nodata" hidden>
+    <strong>No forecast loaded yet.</strong>
+    <p>Sunrise and sunset below are calculated on this page and are always current. Wind, waves and tide come from Open-Meteo and need loading: open <em>Load a forecast</em> at the bottom of the page, or ask Claude to refresh the planner.</p>
+  </div>
+
+  <section aria-labelledby="now-h">
+    <h2 id="now-h" class="eyebrow" style="font-family:var(--font-mono);font-size:.72rem;font-weight:400">Right now</h2>
+    <div class="now">
+      <div class="verdict ln" id="verdict">
+        <span class="big" id="v-big">—</span>
+        <span id="v-why" class="muted">Waiting for forecast data.</span>
+        <span id="v-next" class="mono" style="font-size:.85rem"></span>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="win-h">
+    <div class="sec-head">
+      <h2 id="win-h">Best opening windows</h2>
+      <span class="muted" style="font-size:.88rem">Daylight hours only. Tap a day for the hour-by-hour detail.</span>
+    </div>
+    <div class="windows" id="windows"></div>
+  </section>
+
+  <section aria-labelledby="week-h">
+    <div class="sec-head">
+      <h2 id="week-h">Week at a glance</h2>
+      <div class="legend">
+        <span><i style="background:var(--good)"></i>Good</span>
+        <span><i style="background:var(--warn)"></i>Marginal</span>
+        <span><i style="background:var(--bad)"></i>Poor</span>
+        <span><i style="background:var(--night)"></i>Dark</span>
+      </div>
+    </div>
+    <div class="grid-scroll"><table class="week" id="week"></table></div>
+  </section>
+
+  <section aria-labelledby="day-h">
+    <div class="sec-head">
+      <h2 id="day-h">Day detail</h2>
+      <div class="day-tabs" id="tabs"></div>
+    </div>
+    <div class="tides" id="tides"></div>
+    <div class="chart" id="chart"></div>
+    <div class="hours-scroll"><table class="hours" id="hours"></table></div>
+  </section>
+
+  <section aria-labelledby="exp-h">
+    <h2 id="exp-h">How the cove is exposed</h2>
+    <div class="two">
+      <div class="compass" id="compass"></div>
+      <div class="prose">
+        <p>North Landing is a chalk inlet on the north side of Flamborough Head. Its headlands block anything from the south, east and west, so the sea only gets in through the mouth, which opens to the north. The shaded wedge on the compass is the open sector the planner treats as fully exposed. Outside it, exposure fades out over the next <span class="mono" id="fade-txt">40°</span> on each side, because big North Sea swell from the north-east still wraps around the headland.</p>
+        <p>Each hour is scored on four things:</p>
+        <ul style="margin:0;padding-left:1.2em;display:grid;gap:4px">
+          <li><strong>Waves into the cove</strong>: wave height × how directly it points into the mouth.</li>
+          <li><strong>Onshore wind</strong>: wind speed × the same exposure. Strong gusts from any direction also count.</li>
+          <li><strong>Tide plus waves</strong>: predicted sea level above mean sea level, plus half the effective wave height as a rough allowance for wave run-up. High springs with a northerly sea is the worst case.</li>
+          <li><strong>Rain</strong>: heavy showers mark an hour marginal or poor.</li>
+        </ul>
+        <p class="muted">All limits are adjustable in <em>Settings</em>. The tide limits in particular are a first guess: note the tide height on a day the beach gets covered and set the limit to match.</p>
+      </div>
+    </div>
+  </section>
+
+  <details class="panel" id="settings-panel">
+    <summary>Settings</summary>
+    <div class="form" id="form">
+      <label>Centre of open sector (° true)<span class="h">0 = due north</span><input id="s-centre" type="number" step="1" min="0" max="359"></label>
+      <label>Half-width of open sector (°)<span class="h">fully exposed either side of centre</span><input id="s-half" type="number" step="1" min="5" max="90"></label>
+      <label>Fade beyond sector (°)<span class="h">exposure tapers to zero over this</span><input id="s-fade" type="number" step="1" min="0" max="90"></label>
+      <label>Waves into cove: marginal from (m)<input id="s-w1" type="number" step="0.1" min="0"></label>
+      <label>Waves into cove: poor from (m)<input id="s-w2" type="number" step="0.1" min="0"></label>
+      <label>Onshore wind: marginal from (mph)<input id="s-k1" type="number" step="1" min="0"></label>
+      <label>Onshore wind: poor from (mph)<input id="s-k2" type="number" step="1" min="0"></label>
+      <label>Gusts any direction: poor from (mph)<input id="s-g" type="number" step="1" min="0"></label>
+      <label>Tide + waves: marginal from (m above MSL)<input id="s-t1" type="number" step="0.1"></label>
+      <label>Tide + waves: poor from (m above MSL)<input id="s-t2" type="number" step="0.1"></label>
+      <label>Rain: marginal from (mm/h)<input id="s-r1" type="number" step="0.1" min="0"></label>
+      <label>Rain: poor from (mm/h)<input id="s-r2" type="number" step="0.1" min="0"></label>
+      <label>Shortest window worth listing (hours)<input id="s-min" type="number" step="1" min="1" max="12"></label>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="s-reset" type="button">Restore defaults</button>
+      <span class="muted status">Changes apply straight away and are remembered on this device.</span>
+    </div>
+  </details>
+
+  <details class="panel" id="load-panel">
+    <summary>Load a forecast</summary>
+    <div class="prose">
+      <p>Open each link below. Each one shows a page of raw forecast data. Select all of it, copy, paste it into the box, then press <em>Use this data</em>. Do both links. The data is kept on this device until you load newer data.</p>
+      <ol style="margin:0;padding-left:1.2em;display:grid;gap:4px">
+        <li><a id="url-weather" target="_blank" rel="noopener">Weather: wind, gusts, rain, temperature</a></li>
+        <li><a id="url-marine" target="_blank" rel="noopener">Sea: waves, swell, tide height</a></li>
+      </ol>
+      <textarea id="paste" placeholder='Paste the text from one of the links here. It starts with {"latitude":'></textarea>
+      <div class="row">
+        <button class="btn primary" id="use" type="button">Use this data</button>
+        <button class="btn" id="clear" type="button">Forget pasted data</button>
+        <span class="status" id="paste-status" role="status"></span>
+      </div>
+    </div>
+  </details>
+
+  <footer>
+    <p>Forecasts: Open-Meteo weather and marine models. Tide heights are modelled sea level and can be 20–30 minutes and 0.2–0.3 m out; check the Admiralty tide table for Bridlington before relying on a tight margin. Sunrise and sunset are calculated for the cove.</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const LAT = 54.1285, LON = -0.1005, TZ = "Europe/London";
+  const WEATHER_URL = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&hourly=temperature_2m,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=mph&timezone=Europe%2FLondon&forecast_days=7`;
+  const MARINE_URL = `https://marine-api.open-meteo.com/v1/marine?latitude=${LAT}&longitude=${LON}&hourly=wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,sea_level_height_msl&cell_selection=sea&timezone=Europe%2FLondon&forecast_days=7`;
+
+  const DEFAULTS = { centre: 10, half: 25, fade: 40, w1: 0.6, w2: 1.2, k1: 12, k2: 20, g: 38, t1: 2.0, t2: 2.5, r1: 1.0, r2: 3.0, min: 2 };
+  const FIELDS = { centre: "s-centre", half: "s-half", fade: "s-fade", w1: "s-w1", w2: "s-w2", k1: "s-k1", k2: "s-k2", g: "s-g", t1: "s-t1", t2: "s-t2", r1: "s-r1", r2: "s-r2", min: "s-min" };
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+  let S = Object.assign({}, DEFAULTS, store.get("nl.settings") || {});
+  let published = null;            // forecast.json shipped with the page
+  let pasted = store.get("nl.pasted") || {}; // {weather, marine, at}
+  let selectedDay = null;
+
+  /* ---------- sun ---------- */
+  const rad = Math.PI / 180;
+  function sunTimes(y, m, d) {
+    // Sunrise equation (NOAA simplified), returns UTC Date objects.
+    const jd = Date.UTC(y, m - 1, d, 12) / 86400000 + 2440587.5;
+    const n = Math.round(jd - 2451545.0); // days since J2000 noon
+    const Jstar = n - LON / 360;
+    const M = (357.5291 + 0.98560028 * Jstar) % 360;
+    const C = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad) + 0.0003 * Math.sin(3 * M * rad);
+    const L = (M + C + 180 + 102.9372) % 360;
+    const Jt = 2451545.0 + Jstar + 0.0053 * Math.sin(M * rad) - 0.0069 * Math.sin(2 * L * rad);
+    const dec = Math.asin(Math.sin(L * rad) * Math.sin(23.4397 * rad));
+    const cosw = (Math.sin(-0.833 * rad) - Math.sin(LAT * rad) * Math.sin(dec)) / (Math.cos(LAT * rad) * Math.cos(dec));
+    const w = Math.acos(Math.max(-1, Math.min(1, cosw))) / rad;
+    const toDate = (j) => new Date((j - 2440587.5) * 86400000);
+    return { rise: toDate(Jt - w / 360), set: toDate(Jt + w / 360) };
+  }
+  const fmtHM = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const fmtParts = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  function localParts(date) {
+    const p = Object.fromEntries(fmtParts.formatToParts(date).map((x) => [x.type, x.value]));
+    return { key: `${p.year}-${p.month}-${p.day}`, h: +p.hour, min: +p.minute };
+  }
+  function minutesLocal(date) { const p = localParts(date); return p.h * 60 + p.min; }
+  function sunFor(key) {
+    const [y, m, d] = key.split("-").map(Number);
+    const t = sunTimes(y, m, d);
+    return { rise: minutesLocal(t.rise), set: minutesLocal(t.set) };
+  }
+  const hm = (mins) => `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(Math.round(mins % 60)).padStart(2, "0")}`.replace(/:60$/, ":59");
+  function dayLabel(key, long) {
+    const [y, m, d] = key.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d, 12));
+    return dt.toLocaleDateString("en-GB", { weekday: long ? "long" : "short", day: "numeric", month: "short", timeZone: "UTC" });
+  }
+  function addDays(key, n) {
+    const [y, m, d] = key.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d + n, 12));
+    return dt.toISOString().slice(0, 10);
+  }
+
+  /* ---------- exposure + scoring ---------- */
+  const angDiff = (a, b) => { const x = Math.abs(((a - b) % 360 + 540) % 360 - 180); return x; };
+  function exposure(dir) {
+    if (dir == null || isNaN(dir)) return 0;
+    const off = angDiff(dir, S.centre);
+    if (off <= S.half) return 1;
+    if (S.fade <= 0 || off >= S.half + S.fade) return 0;
+    return 0.5 * (1 + Math.cos(Math.PI * (off - S.half) / S.fade));
+  }
+  const compassPts = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  const cardinal = (d) => d == null ? "—" : compassPts[Math.round(((d % 360) + 360) % 360 / 22.5) % 16];
+  const lvl = (v, a, b) => v == null || isNaN(v) ? 0 : v >= b ? 2 : v >= a ? 1 : 0;
+
+  function scoreHour(r) {
+    const reasons = [];
+    const exW = exposure(r.waveDir), exK = exposure(r.windDir);
+    const effWave = r.wave != null ? r.wave * exW : null;
+    const onshore = r.wind != null ? r.wind * exK : null;
+    const water = r.sea != null ? r.sea + 0.5 * (effWave || 0) : null;
+    const parts = [
+      ["waves", lvl(effWave, S.w1, S.w2), effWave != null ? `${effWave.toFixed(1)} m of sea into the cove` : ""],
+      ["wind", Math.max(lvl(onshore, S.k1, S.k2), (r.gust != null && r.gust >= S.g) ? 2 : 0),
+        r.gust != null && r.gust >= S.g ? `gusts ${Math.round(r.gust)} mph` : onshore != null ? `${Math.round(onshore)} mph onshore wind` : ""],
+      ["tide", lvl(water, S.t1, S.t2), water != null ? `water ${water.toFixed(1)} m above MSL` : ""],
+      ["rain", lvl(r.rain, S.r1, S.r2), r.rain != null ? `${r.rain.toFixed(1)} mm/h rain` : ""],
+    ];
+    let level = 0;
+    for (const [, l, txt] of parts) { if (l > 0) reasons.push({ l, txt }); level = Math.max(level, l); }
+    reasons.sort((a, b) => b.l - a.l);
+    return { level, reasons, effWave, onshore, water, exW, exK };
+  }
+
+  /* ---------- data ---------- */
+  function mergeData() {
+    const pick = (a, b) => {
+      if (!a) return b; if (!b) return a;
+      return (a.at || "") >= (b.at || "") ? a : b;
+    };
+    const W = pick(published && published.weather ? { d: published.weather, at: published.fetchedAt } : null, pasted.weather ? { d: pasted.weather, at: pasted.weatherAt } : null);
+    const M = pick(published && published.marine ? { d: published.marine, at: published.fetchedAt } : null, pasted.marine ? { d: pasted.marine, at: pasted.marineAt } : null);
+    const rows = new Map();
+    const put = (src, map) => {
+      if (!src) return;
+      const h = src.d.hourly; if (!h || !h.time) return;
+      h.time.forEach((t, i) => {
+        const r = rows.get(t) || { time: t, key: t.slice(0, 10), h: +t.slice(11, 13) };
+        for (const [field, k] of Object.entries(map)) if (h[k]) r[field] = h[k][i];
+        rows.set(t, r);
+      });
+    };
+    put(W, { wind: "wind_speed_10m", windDir: "wind_direction_10m", gust: "wind_gusts_10m", rain: "precipitation", temp: "temperature_2m", code: "weather_code" });
+    put(M, { wave: "wave_height", waveDir: "wave_direction", period: "wave_period", swell: "swell_wave_height", swellDir: "swell_wave_direction", sea: "sea_level_height_msl" });
+    return { rows: [...rows.values()].sort((a, b) => a.time < b.time ? -1 : 1), weatherAt: W && W.at, marineAt: M && M.at };
+  }
+
+  function findTides(dayRows) {
+    // local extrema of hourly sea level, refined with a parabola through 3 points
+    const out = [];
+    for (let i = 1; i < dayRows.length - 1; i++) {
+      const a = dayRows[i - 1].sea, b = dayRows[i].sea, c = dayRows[i + 1].sea;
+      if (a == null || b == null || c == null) continue;
+      const hi = b > a && b >= c, lo = b < a && b <= c;
+      if (!hi && !lo) continue;
+      const den = a - 2 * b + c;
+      const off = den !== 0 ? 0.5 * (a - c) / den : 0;
+      const h = b - 0.25 * (a - c) * off;
+      out.push({ type: hi ? "High" : "Low", mins: (dayRows[i].h + off) * 60, h });
+    }
+    return out;
+  }
+
+  function buildDays(rows) {
+    const today = localParts(new Date()).key;
+    const keys = rows.length ? [...new Set(rows.map((r) => r.key))] : Array.from({ length: 7 }, (_, i) => addDays(today, i));
+    return keys.filter((k) => k >= today).slice(0, 7).map((key) => {
+      const sun = sunFor(key);
+      const hours = rows.filter((r) => r.key === key).map((r) => {
+        const mid = r.h * 60 + 30;
+        const light = mid > sun.rise && mid < sun.set;
+        const sc = scoreHour(r);
+        return Object.assign({}, r, sc, { light });
+      });
+      return { key, sun, hours, tides: findTides(rows.filter((r) => r.key === key || r.time === `${addDays(key, 1)}T00:00` || r.time === `${addDays(key, -1)}T23:00`)) .filter((t) => t.mins >= 0 && t.mins < 1440) };
+    });
+  }
+
+  function windows(day) {
+    const out = []; let cur = null;
+    for (const h of day.hours) {
+      const ok = h.light && h.level === 0;
+      if (ok) { if (!cur) cur = { from: h.h, to: h.h + 1, hours: [h] }; else { cur.to = h.h + 1; cur.hours.push(h); } }
+      else if (cur) { out.push(cur); cur = null; }
+    }
+    if (cur) out.push(cur);
+    return out.filter((w) => w.to - w.from >= S.min);
+  }
+
+  /* ---------- render ---------- */
+  const LEVEL_WORD = ["Good to open", "Marginal", "Stay shut"];
+  const LEVEL_SHORT = ["Good", "Marginal", "Poor"];
+  const arrow = (dir) => dir == null ? "" : `<span class="arrow" style="transform:rotate(${(dir + 180) % 360}deg)" aria-hidden="true">↑</span>`;
+  const f1 = (v, u) => v == null ? "—" : `${v.toFixed(1)}${u}`;
+  const f0 = (v, u) => v == null ? "—" : `${Math.round(v)}${u}`;
+
+  function render() {
+    const data = mergeData();
+    const days = buildDays(data.rows);
+    const has = data.rows.length > 0;
+    $("nodata").hidden = has;
+    const ago = (iso) => {
+      if (!iso) return null;
+      const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+      if (mins < 90) return `${mins} min ago`;
+      if (mins < 48 * 60) return `${Math.round(mins / 60)} h ago`;
+      return `${Math.round(mins / 1440)} days ago`;
+    };
+    const parts = [];
+    if (data.weatherAt) parts.push(`weather ${ago(data.weatherAt)}`);
+    if (data.marineAt) parts.push(`sea ${ago(data.marineAt)}`);
+    $("fresh").textContent = parts.length ? `Forecast loaded: ${parts.join(", ")}` : "Forecast not loaded";
+    if (has && (!data.weatherAt || !data.marineAt)) $("fresh").textContent += data.weatherAt ? " · sea data missing" : " · weather data missing";
+
+    if (!selectedDay || !days.find((d) => d.key === selectedDay)) selectedDay = days[0] && days[0].key;
+    renderNow(days, has);
+    renderWindows(days, has);
+    renderWeek(days, has);
+    renderDay(days.find((d) => d.key === selectedDay), days);
+    renderCompass(days);
+  }
+
+  function renderNow(days, has) {
+    const now = localParts(new Date());
+    $("clock").textContent = `Now ${hm(now.h * 60 + now.min)} · ${dayLabel(now.key, true)}`;
+    const today = days.find((d) => d.key === now.key) || days[0];
+    const hr = today && today.hours.find((h) => h.h === now.h);
+    const v = $("verdict");
+    const sun = today ? today.sun : sunFor(now.key);
+    const stats = [];
+    if (hr) {
+      const cls = hr.light ? `l${hr.level}` : "ln";
+      v.className = `verdict ${cls}`;
+      $("v-big").textContent = hr.light ? LEVEL_WORD[hr.level] : "Dark";
+      $("v-why").textContent = hr.reasons.length ? hr.reasons.map((r) => r.txt).join(" · ") : "Calm sea, light onshore wind, tide well down.";
+      stats.push(stat("Wind", `${f0(hr.wind, "")}<span class="muted" style="font-size:.8rem"> mph</span> ${arrow(hr.windDir)}`, `from ${cardinal(hr.windDir)}, gusts ${f0(hr.gust, " mph")}`, hr.onshore != null ? lvl(hr.onshore, S.k1, S.k2) : null));
+      stats.push(stat("Waves", `${f1(hr.wave, "")}<span class="muted" style="font-size:.8rem"> m</span> ${arrow(hr.waveDir)}`, `from ${cardinal(hr.waveDir)} · ${f1(hr.effWave, " m")} into cove`, hr.effWave != null ? lvl(hr.effWave, S.w1, S.w2) : null));
+      stats.push(stat("Sea level", `${hr.sea == null ? "—" : (hr.sea >= 0 ? "+" : "") + hr.sea.toFixed(1)}<span class="muted" style="font-size:.8rem"> m</span>`, nextTide(days, now), hr.water != null ? lvl(hr.water, S.t1, S.t2) : null));
+      stats.push(stat("Rain · temp", `${f1(hr.rain, "")}<span class="muted" style="font-size:.8rem"> mm</span>`, `${f0(hr.temp, "°C")}`, hr.rain != null ? lvl(hr.rain, S.r1, S.r2) : null));
+    } else {
+      v.className = "verdict ln";
+      $("v-big").textContent = "—";
+      $("v-why").textContent = has ? "The loaded forecast doesn't cover this hour. Load a newer one." : "Load a forecast to score the conditions.";
+    }
+    stats.push(stat("Daylight", `${hm(sun.rise)}–${hm(sun.set)}`, `${Math.floor((sun.set - sun.rise) / 60)} h ${Math.round((sun.set - sun.rise) % 60)} min of light`, null));
+    $("stats").innerHTML = stats.join("");
+    // next good window
+    let next = "";
+    outer: for (const d of days) for (const w of windows(d)) {
+      if (d.key > now.key || w.to > now.h) { next = `Next good window: ${d.key === now.key ? "today" : dayLabel(d.key)} ${hm(Math.max(w.from, d.key === now.key ? now.h : 0) * 60)}–${hm(w.to * 60)}`; break outer; }
+    }
+    $("v-next").textContent = has ? (next || "No good window in the forecast.") : "";
+  }
+  function nextTide(days, now) {
+    const t = now.h * 60 + now.min;
+    for (const d of days) for (const x of d.tides) if (d.key > now.key || x.mins > t)
+      return `next ${x.type.toLowerCase()} ${hm(x.mins)}${d.key === now.key ? "" : " " + dayLabel(d.key)} (${x.h >= 0 ? "+" : ""}${x.h.toFixed(1)} m)`;
+    return "";
+  }
+  function stat(label, value, sub, level) {
+    const flag = level == null ? "" : ` <span class="flag l${level}">${LEVEL_SHORT[level]}</span>`;
+    return `<div class="stat"><span class="eyebrow">${label}${flag}</span><span class="v">${value}</span><span class="s">${sub}</span></div>`;
+  }
+
+  function renderWindows(days, has) {
+    $("windows").innerHTML = days.map((d) => {
+      const ws = windows(d);
+      const tides = d.tides.filter((t) => t.type === "High").map((t) => `HW ${hm(t.mins)}`).join(", ");
+      const body = !has ? `<li class="muted">Forecast not loaded</li>`
+        : ws.length ? ws.map((w) => `<li><span class="mono">${hm(w.from * 60)}–${hm(w.to * 60)}</span><span class="flag l0">${w.to - w.from} h</span></li>`).join("")
+        : `<li class="muted">No good window${worst(d)}</li>`;
+      return `<button class="win" type="button" data-day="${d.key}"><span class="d">${dayLabel(d.key, true)}</span><ul>${body}</ul><span class="sun mono">☀ ${hm(d.sun.rise)}–${hm(d.sun.set)}${tides ? " · " + tides : ""}</span></button>`;
+    }).join("");
+  }
+  function worst(d) {
+    const counts = {};
+    d.hours.filter((h) => h.light).forEach((h) => h.reasons.forEach((r) => { const k = r.txt.split(" ").slice(-2).join(" "); counts[k] = (counts[k] || 0) + r.l; }));
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    if (!top) return "";
+    const map = { "the cove": "sea into the cove", "onshore wind": "onshore wind", "above MSL": "high water", "mm/h rain": "rain" };
+    const k = Object.keys(map).find((x) => top[0].endsWith(x)) || "";
+    return k ? `: mainly ${map[k]}` : top[0].startsWith("gusts") || top[0].includes("mph") ? ": mainly gusts" : "";
+  }
+
+  function renderWeek(days, has) {
+    const H = Array.from({ length: 24 }, (_, i) => i);
+    let html = `<thead><tr><th></th>${H.map((h) => `<th>${h % 3 === 0 ? String(h).padStart(2, "0") : ""}</th>`).join("")}</tr></thead><tbody>`;
+    for (const d of days) {
+      html += `<tr class="${d.key === selectedDay ? "sel" : ""}"><th class="day" scope="row">${dayLabel(d.key)}</th>`;
+      for (const h of H) {
+        const r = d.hours.find((x) => x.h === h);
+        const mid = h * 60 + 30, light = mid > d.sun.rise && mid < d.sun.set;
+        let cls, title;
+        if (!r) { cls = light ? "cx" : "cn"; title = `${hm(h * 60)} ${light ? "no data" : "dark"}`; }
+        else { cls = `c${r.level}${light ? "" : " dim"}`; title = `${dayLabel(d.key)} ${hm(h * 60)}: ${LEVEL_SHORT[r.level]}${light ? "" : " (dark)"}${r.reasons.length ? " – " + r.reasons.map((x) => x.txt).join(", ") : ""}`; }
+        html += `<td class="${cls}" title="${title}"><button type="button" data-day="${d.key}" aria-label="${title}"></button></td>`;
+      }
+      html += `</tr>`;
+    }
+    $("week").innerHTML = html + "</tbody>";
+  }
+
+  function renderDay(day, days) {
+    $("tabs").innerHTML = days.map((d) => `<button type="button" data-day="${d.key}" aria-pressed="${d.key === selectedDay}">${dayLabel(d.key)}</button>`).join("");
+    if (!day) return;
+    $("day-h").textContent = `Day detail · ${dayLabel(day.key, true)}`;
+    const t = day.tides.map((x) => `<span><strong>${x.type}</strong> <span class="mono">${hm(x.mins)} · ${x.h >= 0 ? "+" : ""}${x.h.toFixed(2)} m</span></span>`);
+    t.unshift(`<span><strong>Sunrise</strong> <span class="mono">${hm(day.sun.rise)}</span></span>`);
+    t.push(`<span><strong>Sunset</strong> <span class="mono">${hm(day.sun.set)}</span></span>`);
+    $("tides").innerHTML = t.join("");
+    $("chart").innerHTML = day.hours.length ? chartSVG(day) : `<p class="muted" style="padding:16px">No hourly forecast for this day yet.</p>`;
+    $("chart").hidden = false;
+    const rows = day.hours.map((h) => `<tr class="${h.light ? "" : "night"}">
+      <td class="mono">${hm(h.h * 60)}</td>
+      <td>${h.light ? `<span class="flag l${h.level}">${LEVEL_SHORT[h.level]}</span>` : "Dark"}</td>
+      <td class="mono">${arrow(h.windDir)} ${cardinal(h.windDir)} ${f0(h.wind, "")} <span class="muted">g${f0(h.gust, "")}</span></td>
+      <td class="mono">${arrow(h.waveDir)} ${cardinal(h.waveDir)} ${f1(h.wave, " m")} <span class="muted">${f0(h.period, "s")}</span></td>
+      <td class="mono">${f1(h.effWave, " m")}</td>
+      <td class="mono">${h.sea == null ? "—" : (h.sea >= 0 ? "+" : "") + h.sea.toFixed(2) + " m"}</td>
+      <td class="mono">${f1(h.rain, "")} · ${f0(h.temp, "°")}</td>
+      <td class="why">${h.reasons.map((r) => r.txt).join("; ")}</td></tr>`).join("");
+    $("hours").innerHTML = day.hours.length ? `<thead><tr><th>Hour</th><th>Verdict</th><th>Wind mph</th><th>Waves</th><th>Into cove</th><th>Sea level</th><th>Rain · temp</th><th>Why</th></tr></thead><tbody>${rows}</tbody>` : "";
+  }
+
+  function chartSVG(day) {
+    const W = 760, Hh = 300, padL = 44, padR = 44, top = 14, tideH = 150, gap = 26, barH = 70;
+    const x = (mins) => padL + (mins / 1440) * (W - padL - padR);
+    const seaVals = day.hours.map((h) => h.water).filter((v) => v != null).concat(day.hours.map((h) => h.sea).filter((v) => v != null));
+    let lo = Math.min(-3, ...seaVals, S.t1), hi = Math.max(3, ...seaVals, S.t2 + 0.3);
+    lo = Math.floor(lo); hi = Math.ceil(hi);
+    const y = (v) => top + tideH - ((v - lo) / (hi - lo)) * tideH;
+    let s = `<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Tide height, waves into the cove and onshore wind for ${dayLabel(day.key, true)}">`;
+    // night shading
+    s += `<rect x="${x(0)}" y="${top}" width="${x(day.sun.rise) - x(0)}" height="${tideH + gap + barH}" fill="var(--night)"/>`;
+    s += `<rect x="${x(day.sun.set)}" y="${top}" width="${x(1440) - x(day.sun.set)}" height="${tideH + gap + barH}" fill="var(--night)"/>`;
+    // verdict band
+    day.hours.forEach((h) => { if (h.light) s += `<rect x="${x(h.h * 60) + 0.5}" y="${top + tideH + 6}" width="${x(60) - x(0) - 1}" height="8" rx="2" fill="var(--${["good", "warn", "bad"][h.level]})"/>`; });
+    // grid + y labels
+    for (let v = lo; v <= hi; v++) {
+      s += `<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="${v === 0 ? 1.2 : 0.6}"/>`;
+      s += `<text x="${padL - 6}" y="${y(v) + 4}" text-anchor="end">${v > 0 ? "+" : ""}${v}</text>`;
+    }
+    s += `<text x="${padL}" y="${top - 3}" style="fill:var(--ink)">Sea level, m above MSL</text>`;
+    // thresholds
+    [[S.t1, "warn"], [S.t2, "bad"]].forEach(([v, c]) => { s += `<line x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}" stroke="var(--${c})" stroke-dasharray="5 4" stroke-width="1.2"/>`; });
+    // water incl. wave allowance (area) + tide line
+    const pts = (k) => day.hours.filter((h) => h[k] != null).map((h) => `${x(h.h * 60 + 30).toFixed(1)},${y(h[k]).toFixed(1)}`);
+    const wp = pts("water");
+    if (wp.length) s += `<polyline points="${wp.join(" ")}" fill="none" stroke="var(--sea)" stroke-width="1.2" stroke-dasharray="2 3"/>`;
+    const tp = pts("sea");
+    if (tp.length) {
+      const first = day.hours.find((h) => h.sea != null), last = [...day.hours].reverse().find((h) => h.sea != null);
+      s += `<polygon points="${x(first.h * 60 + 30)},${y(lo)} ${tp.join(" ")} ${x(last.h * 60 + 30)},${y(lo)}" fill="var(--sea)" opacity=".16"/>`;
+      s += `<polyline points="${tp.join(" ")}" fill="none" stroke="var(--sea)" stroke-width="2.4" stroke-linejoin="round"/>`;
+    }
+    day.tides.forEach((t) => {
+      const yy = y(t.h);
+      s += `<circle cx="${x(t.mins)}" cy="${yy}" r="3.5" fill="var(--ink)"/>`;
+      s += `<text x="${x(t.mins)}" y="${t.type === "High" ? yy - 8 : yy + 16}" text-anchor="middle" style="fill:var(--ink)">${hm(t.mins)}</text>`;
+    });
+    // bottom: waves into cove (bars) and onshore wind (line)
+    const by = top + tideH + gap, maxW = Math.max(S.w2 * 1.3, ...day.hours.map((h) => h.effWave || 0)), maxK = Math.max(S.k2 * 1.3, ...day.hours.map((h) => h.onshore || 0));
+    s += `<text x="${padL}" y="${by - 3}" style="fill:var(--ink)">Waves into cove (bars, m) · onshore wind (line, mph)</text>`;
+    s += `<line x1="${padL}" x2="${W - padR}" y1="${by + barH}" y2="${by + barH}" stroke="var(--line)"/>`;
+    day.hours.forEach((h) => {
+      if (h.effWave == null) return;
+      const bh = (h.effWave / maxW) * barH;
+      s += `<rect x="${x(h.h * 60) + 2}" y="${by + barH - bh}" width="${x(60) - x(0) - 4}" height="${bh}" fill="var(--${["good", "warn", "bad"][lvl(h.effWave, S.w1, S.w2)]})" opacity=".75"/>`;
+    });
+    const kp = day.hours.filter((h) => h.onshore != null).map((h) => `${x(h.h * 60 + 30).toFixed(1)},${(by + barH - (h.onshore / maxK) * barH).toFixed(1)}`);
+    if (kp.length) s += `<polyline points="${kp.join(" ")}" fill="none" stroke="var(--ink)" stroke-width="1.6"/>`;
+    s += `<text x="${padL - 6}" y="${by + 8}" text-anchor="end">${maxW.toFixed(1)}m</text><text x="${W - padR + 6}" y="${by + 8}">${Math.round(maxK)}mph</text>`;
+    // x axis
+    for (let h = 0; h <= 24; h += 3) s += `<text x="${x(h * 60)}" y="${Hh - 4}" text-anchor="middle">${String(h % 24).padStart(2, "0")}</text>`;
+    // now marker
+    const now = localParts(new Date());
+    if (now.key === day.key) { const nx = x(now.h * 60 + now.min); s += `<line x1="${nx}" x2="${nx}" y1="${top}" y2="${by + barH}" stroke="var(--ink)" stroke-width="1"/><text x="${nx + 4}" y="${top + 10}" style="fill:var(--ink)">now</text>`; }
+    return s + `</svg>`;
+  }
+
+  function renderCompass(days) {
+    const C = 140, R = 110;
+    const pt = (deg, r) => [C + r * Math.sin(deg * rad), C - r * Math.cos(deg * rad)];
+    const arc = (a0, a1, r) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r); const large = ((a1 - a0 + 360) % 360) > 180 ? 1 : 0; return `M${C},${C} L${x0},${y0} A${r},${r} 0 ${large} 1 ${x1},${y1} Z`; };
+    let s = `<svg viewBox="0 0 280 280" role="img" aria-label="Compass showing the open sector of the cove">`;
+    s += `<circle cx="${C}" cy="${C}" r="${R}" fill="var(--bg)" stroke="var(--line)"/>`;
+    if (S.fade > 0) {
+      s += `<path d="${arc(S.centre - S.half - S.fade, S.centre - S.half, R)}" fill="var(--warn)" opacity=".25"/>`;
+      s += `<path d="${arc(S.centre + S.half, S.centre + S.half + S.fade, R)}" fill="var(--warn)" opacity=".25"/>`;
+    }
+    s += `<path d="${arc(S.centre - S.half, S.centre + S.half, R)}" fill="var(--bad)" opacity=".35"/>`;
+    // land (sheltered) hint
+    s += `<path d="${arc(S.centre + S.half + S.fade, S.centre - S.half - S.fade + 360, R * 0.45)}" fill="var(--muted)" opacity=".18"/>`;
+    for (let d = 0; d < 360; d += 22.5) { const [a, b] = pt(d, R), [c, e] = pt(d, R - (d % 90 === 0 ? 10 : 5)); s += `<line x1="${a}" y1="${b}" x2="${c}" y2="${e}" stroke="var(--muted)"/>`; }
+    [["N", 0], ["E", 90], ["S", 180], ["W", 270]].forEach(([l, d]) => { const [x, y] = pt(d, R + 14); s += `<text x="${x}" y="${y + 4}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${l}</text>`; });
+    // today's daylight-average wind and wave direction
+    const today = days[0];
+    const avgDir = (k) => { const hs = today ? today.hours.filter((h) => h.light && h[k] != null) : []; if (!hs.length) return null; let sx = 0, sy = 0; hs.forEach((h) => { sx += Math.sin(h[k] * rad); sy += Math.cos(h[k] * rad); }); return (Math.atan2(sx, sy) / rad + 360) % 360; };
+    const drawArrow = (dir, col, label) => {
+      if (dir == null) return "";
+      const [x0, y0] = pt(dir, R - 6), [x1, y1] = pt(dir, 28);
+      const [lx, ly] = pt(dir, R - 30);
+      return `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="3" marker-end="url(#ah-${label})"/><text x="${lx}" y="${ly}" text-anchor="middle" style="fill:${col};font-weight:600">${label}</text>`;
+    };
+    s += `<defs><marker id="ah-wind" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/></marker><marker id="ah-sea" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--sea)"/></marker></defs>`;
+    s += drawArrow(avgDir("windDir"), "var(--ink)", "wind");
+    s += drawArrow(avgDir("waveDir"), "var(--sea)", "sea");
+    s += `<circle cx="${C}" cy="${C}" r="4" fill="var(--ink)"/>`;
+    s += `</svg><p class="muted" style="font-size:.8rem;text-align:center;margin-top:4px">Red: open to the sea (${(S.centre - S.half + 360) % 360}°–${(S.centre + S.half) % 360}°). Amber: partly exposed. Arrows: today's daylight wind and sea, pointing the way they travel.</p>`;
+    $("compass").innerHTML = s;
+    $("fade-txt").textContent = `${S.fade}°`;
+  }
+
+  /* ---------- wiring ---------- */
+  function syncForm() { for (const [k, id] of Object.entries(FIELDS)) $(id).value = S[k]; }
+  for (const [k, id] of Object.entries(FIELDS)) $(id).addEventListener("input", (e) => {
+    const v = parseFloat(e.target.value); if (isNaN(v)) return;
+    S[k] = v; store.set("nl.settings", S); render();
+  });
+  $("s-reset").addEventListener("click", () => { S = Object.assign({}, DEFAULTS); store.del("nl.settings"); syncForm(); render(); });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-day]"); if (!b) return;
+    selectedDay = b.dataset.day; render();
+    if (!b.closest("#tabs")) document.getElementById("day-h").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
+  $("url-weather").href = WEATHER_URL;
+  $("url-marine").href = MARINE_URL;
+  $("use").addEventListener("click", () => {
+    const st = $("paste-status");
+    let j;
+    try { j = JSON.parse($("paste").value.trim()); } catch { st.textContent = "That isn't the complete data. Select everything on the link's page, copy and paste again."; return; }
+    const h = j && j.hourly;
+    if (!h || !h.time) { st.textContent = "No hourly forecast found in that text. Use one of the two links above."; return; }
+    const now = new Date().toISOString();
+    if (h.wind_speed_10m) { pasted.weather = j; pasted.weatherAt = now; st.textContent = `Weather loaded (${h.time.length} hours). ${pasted.marine ? "" : "Now do the sea link."}`; }
+    else if (h.wave_height || h.sea_level_height_msl) { pasted.marine = j; pasted.marineAt = now; st.textContent = `Sea data loaded (${h.time.length} hours). ${pasted.weather ? "" : "Now do the weather link."}`; }
+    else { st.textContent = "This data has neither wind nor waves in it. Use one of the two links above."; return; }
+    store.set("nl.pasted", pasted); $("paste").value = ""; render();
+  });
+  $("clear").addEventListener("click", () => { pasted = {}; store.del("nl.pasted"); $("paste-status").textContent = "Pasted data forgotten."; render(); });
+
+  syncForm();
+  render();
+  fetch("forecast.json", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((j) => { if (j && (j.weather || j.marine)) { published = j; render(); } }).catch(() => {});
+  setInterval(() => render(), 5 * 60 * 1000);
+})();
+</script>
