@@ -758,7 +758,7 @@ footer { font-size: .8rem; color: var(--muted); display: grid; gap: 4px; border-
     $("shot-img").innerHTML = s.image ? `<img src="/_blob/${esc(s.image)}" alt="North Landing camera at ${esc(whenLabel(s.t))}">` : `<p class="muted">No image for this hour.</p>`;
     const f = s.forecast || {}, o = s.obs || {};
     const obs = [o.beach && `Beach: ${o.beach}`, o.surf && `Surf in cove: ${o.surf}`, o.whitecaps != null && (o.whitecaps ? "White horses offshore" : "No white horses"), o.people != null && `About ${o.people} people`, o.visibility && o.visibility !== "good" && `View: ${o.visibility}`].filter(Boolean);
-    $("shot-cap").innerHTML = `<strong class="mono">${esc(whenLabel(s.t))}${s.camTime ? ` <span class="muted">(camera clock ${esc(s.camTime)})</span>` : ""}</strong>
+    $("shot-cap").innerHTML = `<strong class="mono">${esc(whenLabel(s.t))}${s.camTime ? ` <span class="muted">(camera clock ${esc(s.camTime)})</span>` : ""}${s.src === "sd" ? ` <span class="muted">· smaller image</span>` : ""}</strong>
       <span class="mono muted">Forecast then: sea ${f.sea == null ? "—" : (f.sea >= 0 ? "+" : "") + Number(f.sea).toFixed(2) + " m"} · waves ${f1(f.wave, " m")} from ${cardinal(f.waveDir)} · wind ${f0(f.wind, " mph")} from ${cardinal(f.windDir)}</span>
       ${obs.length ? `<div class="obs">${obs.map((x) => `<span>${esc(x)}</span>`).join("")}</div>` : ""}
       ${o.note ? `<span>${esc(o.note)}</span>` : ""}`;
